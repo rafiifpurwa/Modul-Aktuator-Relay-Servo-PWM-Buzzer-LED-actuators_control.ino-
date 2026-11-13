@@ -1,0 +1,66 @@
+#include <ESP32Servo.h>
+
+#define RELAY_PIN  26
+#define SERVO_PIN  13
+#define BUZZER_PIN 25
+#define LED_PIN    2
+
+Servo myServo;
+
+// Catatan: Beberapa modul Relay bersifat Active LOW (LOW = Nyala, HIGH = Mati).
+// Jika menggunakan Grove Relay, umumnya Active HIGH (HIGH = Nyala, LOW = Mati).
+const bool RELAY_ACTIVE_HIGH = true;
+
+void setRelay(bool turnOn) {
+  if (RELAY_ACTIVE_HIGH) {
+    digitalWrite(RELAY_PIN, turnOn ? HIGH : LOW);
+  } else {
+    digitalWrite(RELAY_PIN, turnOn ? LOW : HIGH);
+  }
+}
+
+void setServoAngle(int angle) {
+  angle = constrain(angle, 0, 180); // Batasi sudut 0 - 180 derajat
+  myServo.write(angle);
+}
+
+void setup() {
+  Serial.begin(115200);
+  
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  
+  setRelay(false); // Pastikan relay mati saat awal menyala
+  
+  // Alokasi timer PWM ESP32 untuk Servo
+  ESP32PWM::allocateTimer(0);
+  myServo.setPeriodHertz(50); // Standar frekuensi servo 50Hz
+  myServo.attach(SERVO_PIN, 500, 2400);
+  setServoAngle(0);
+}
+
+unsigned long previousActuatorMillis = 0;
+int testStep = 0;
+
+void loop() {
+  // Contoh pengujian sekuensial Non-Blocking tiap 3 detik
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousActuatorMillis >= 3000) {
+    previousActuatorMillis = currentMillis;
+    
+    if (testStep == 0) {
+      Serial.println("Aktuator: Relay ON, Servo 90 derajat, LED ON");
+      setRelay(true);
+      setServoAngle(90);
+      digitalWrite(LED_PIN, HIGH);
+      testStep = 1;
+    } else {
+      Serial.println("Aktuator: Relay OFF, Servo 0 derajat, LED OFF");
+      setRelay(false);
+      setServoAngle(0);
+      digitalWrite(LED_PIN, LOW);
+      testStep = 0;
+    }
+  }
+}
